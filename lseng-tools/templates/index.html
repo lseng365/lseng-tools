@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LSENG Tools</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', -apple-system, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+  header {
+    padding: 2rem 2rem 1.5rem;
+    border-bottom: 1px solid #1e293b;
+  }
+  header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.3px; }
+  header h1 span { color: #60a5fa; }
+  header p { color: #475569; font-size: 0.85rem; margin-top: 0.25rem; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.2rem;
+    padding: 2rem;
+    max-width: 1000px;
+  }
+  .card {
+    background: #1e2332;
+    border: 1px solid #1e293b;
+    border-radius: 14px;
+    padding: 1.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+    position: relative;
+    display: block;
+  }
+  .card:hover {
+    border-color: #60a5fa;
+    background: #1a2540;
+    transform: translateY(-2px);
+  }
+  .card .icon { font-size: 2rem; margin-bottom: 0.9rem; }
+  .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 0.4rem; }
+  .card p { font-size: 0.82rem; color: #64748b; line-height: 1.5; }
+  .badge {
+    position: absolute; top: 1rem; right: 1rem;
+    background: #1d4ed8; color: #bfdbfe;
+    font-size: 0.68rem; font-weight: 700;
+    padding: 0.15rem 0.5rem; border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+  .coming-soon {
+    opacity: 0.4; cursor: not-allowed; pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>LSENG <span>Tools</span></h1>
+  <p>내부 업무 도구 모음</p>
+</header>
+
+<div class="grid">
+  {% for tool in tools %}
+  <a class="card" href="{{ tool.url }}">
+    {% if tool.badge %}<span class="badge">{{ tool.badge }}</span>{% endif %}
+    <div class="icon">{{ tool.icon }}</div>
+    <h2>{{ tool.name }}</h2>
+    <p>{{ tool.desc }}</p>
+  </a>
+  {% endfor %}
+</div>
+</body>
+</html>

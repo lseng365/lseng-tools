@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF → DXF 변환 | LSENG Tools</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', -apple-system, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+  header {
+    padding: 1.2rem 2rem;
+    border-bottom: 1px solid #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  header a {
+    color: #475569; text-decoration: none; font-size: 0.85rem;
+    transition: color 0.15s;
+  }
+  header a:hover { color: #94a3b8; }
+  header span { color: #1e293b; }
+  header h1 { font-size: 1rem; font-weight: 600; }
+
+  .container {
+    max-width: 540px;
+    margin: 3rem auto;
+    padding: 0 1.5rem;
+  }
+  .tool-header { text-align: center; margin-bottom: 2rem; }
+  .tool-header .icon { font-size: 2.5rem; margin-bottom: 0.6rem; }
+  .tool-header h2 { font-size: 1.5rem; font-weight: 700; }
+  .tool-header p { color: #64748b; font-size: 0.88rem; margin-top: 0.3rem; }
+
+  .drop-zone {
+    border: 2px dashed #334155;
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #1e2332;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.dragover { border-color: #60a5fa; background: #1a2540; }
+  .drop-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .drop-zone .drop-icon { font-size: 2rem; margin-bottom: 0.8rem; }
+  .drop-zone p { color: #94a3b8; font-size: 0.92rem; }
+  .drop-zone .hint { font-size: 0.78rem; color: #475569; margin-top: 0.3rem; }
+  .file-name { margin-top: 0.8rem; font-size: 0.85rem; color: #60a5fa; font-weight: 500; display: none; }
+
+  .btn {
+    width: 100%; margin-top: 1rem;
+    padding: 0.8rem; border: none; border-radius: 10px;
+    background: #2563eb; color: #fff;
+    font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .btn:hover:not(:disabled) { background: #1d4ed8; }
+  .btn:disabled { background: #1e3a6e; color: #64748b; cursor: not-allowed; }
+
+  .progress-bar { height: 3px; background: #1e3a6e; border-radius: 2px; margin-top: 0.6rem; overflow: hidden; display: none; }
+  .progress-fill { height: 100%; background: #60a5fa; width: 0%; transition: width 0.3s; }
+
+  .status {
+    margin-top: 1rem; padding: 0.85rem 1rem;
+    border-radius: 10px; font-size: 0.88rem; display: none;
+  }
+  .status.loading { background: #1e2d4a; color: #93c5fd; border: 1px solid #1e40af; }
+  .status.success { background: #14291e; color: #4ade80; border: 1px solid #166534; }
+  .status.error   { background: #2a1215; color: #f87171; border: 1px solid #7f1d1d; }
+
+  .info {
+    margin-top: 1.5rem; padding: 0.9rem 1rem;
+    background: #1a1f2e; border-radius: 10px;
+    border: 1px solid #1e293b;
+    font-size: 0.8rem; color: #64748b; line-height: 1.7;
+  }
+  .info b { color: #94a3b8; }
+</style>
+</head>
+<body>
+<header>
+  <a href="/">← LSENG Tools</a>
+  <span>|</span>
+  <h1>📐 PDF → DXF 변환</h1>
+</header>
+
+<div class="container">
+  <div class="tool-header">
+    <div class="icon">📐</div>
+    <h2>PDF → DXF 변환기</h2>
+    <p>CAD 도면 PDF를 AutoCAD용 DXF 파일로 변환합니다</p>
+  </div>
+
+  <div class="drop-zone" id="dropZone">
+    <input type="file" id="fileInput" accept=".pdf">
+    <div class="drop-icon">📄</div>
+    <p>PDF 파일을 여기에 드래그하거나 클릭해서 선택</p>
+    <div class="hint">최대 50MB · 벡터 PDF 권장</div>
+    <div class="file-name" id="fileName"></div>
+  </div>
+
+  <button class="btn" id="convertBtn" disabled>DXF로 변환하기</button>
+
+  <div class="progress-bar" id="progressBar">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="info">
+    <b>지원 파일</b>: AutoCAD에서 출력한 벡터 PDF, 설계 도면 PDF<br>
+    <b>출력 레이어</b>: LINES · CURVES · RECTANGLES · RED_LINES · TEXT<br>
+    <b>단위</b>: mm (AutoCAD R2010 형식)<br>
+    <b>참고</b>: 스캔된 이미지 PDF는 변환 품질이 낮을 수 있습니다
+  </div>
+</div>
+
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const convertBtn = document.getElementById('convertBtn');
+const fileNameEl = document.getElementById('fileName');
+const statusEl = document.getElementById('status');
+const progressBar = document.getElementById('progressBar');
+const progressFill = document.getElementById('progressFill');
+
+let selectedFile = null;
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) setFile(file);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+function setFile(file) {
+  if (!file.name.toLowerCase().endsWith('.pdf')) {
+    showStatus('PDF 파일만 업로드할 수 있습니다.', 'error'); return;
+  }
+  selectedFile = file;
+  fileNameEl.textContent = `✓ ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`;
+  fileNameEl.style.display = 'block';
+  convertBtn.disabled = false;
+  statusEl.style.display = 'none';
+}
+
+function showStatus(msg, type) {
+  statusEl.textContent = msg;
+  statusEl.className = `status ${type}`;
+  statusEl.style.display = 'block';
+}
+
+convertBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  convertBtn.disabled = true;
+  progressBar.style.display = 'block';
+  showStatus('⏳ 변환 중입니다... 파일 크기에 따라 수십 초 걸릴 수 있습니다.', 'loading');
+
+  let prog = 0;
+  const timer = setInterval(() => {
+    prog = Math.min(prog + Math.random() * 8, 85);
+    progressFill.style.width = prog + '%';
+  }, 400);
+
+  try {
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    const res = await fetch('/api/pdf-to-dxf', { method: 'POST', body: formData });
+
+    clearInterval(timer);
+    progressFill.style.width = '100%';
+
+    if (!res.ok) {
+      const data = await res.json();
+      showStatus(`❌ ${data.error || '변환 실패'}`, 'error');
+      convertBtn.disabled = false;
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = selectedFile.name.replace(/\.pdf$/i, '') + '.dxf';
+    a.click();
+    URL.revokeObjectURL(url);
+    showStatus('✅ 변환 완료! DXF 파일이 다운로드되었습니다.', 'success');
+  } catch (err) {
+    clearInterval(timer);
+    showStatus(`❌ 오류: ${err.message}`, 'error');
+  } finally {
+    convertBtn.disabled = false;
+    setTimeout(() => { progressFill.style.width = '0%'; progressBar.style.display = 'none'; }, 1500);
+  }
+});
+</script>
+</body>
+</html>
